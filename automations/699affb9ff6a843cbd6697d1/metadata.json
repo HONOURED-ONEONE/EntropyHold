@@ -1,37 +1,34 @@
 {
   "automationId": "699affb9ff6a843cbd6697d1",
   "automationName": "Unnamed Automation",
-  "version": "v12",
+  "version": "v13",
   "mode": "multi-file",
   "dependencies": [
     {
-      "id": "1771775426667_34",
+      "id": "1772035852996_14",
       "name": "axios",
       "version": "latest"
     },
     {
-      "id": "1771775426667_35",
+      "id": "1772035852996_15",
       "name": "crypto",
       "version": "latest"
     }
   ],
   "environmentVariables": [
+    "HONEYPOT_BASE_URL",
+    "HONEYPOT_ADMIN_KEY",
+    "P95_FINALIZE_WARN",
+    "CB_SUCCESS_WARN",
+    "CB_P95_WARN",
+    "EVIDENCE_STORE_ENDPOINT",
+    "PARTNER_ENDPOINT",
+    "OPERATOR_ACTION",
+    "API_KEY",
     "ORCHESTRATOR_BASE_URL",
     "ORCHESTRATOR_API_KEY",
     "SESSION_ID",
-    "HONEYPOT_BASE_URL",
-    "HONEYPOT_ADMIN_KEY",
-    "TURBOTIC_OPERATOR_ID",
-    "PARTNER_ENDPOINT",
-    "EVIDENCE_STORE_ENDPOINT",
-    "OPERATOR_ACTION",
-    "DASHBOARD_ID",
-    "DASHBOARD_NAME",
-    "ROLE_EXECUTIVE",
-    "TURBOTIC_API_BASE",
-    "TURBOTIC_API_TOKEN",
-    "DRY_RUN",
-    "TURBOTIC_DASHBOARD_VIS_PATCH"
+    "TURBOTIC_OPERATOR_ID"
   ],
-  "syncedAt": "2026-02-25T10:18:20.296Z"
+  "syncedAt": "2026-02-25T16:11:22.905Z"
 }
