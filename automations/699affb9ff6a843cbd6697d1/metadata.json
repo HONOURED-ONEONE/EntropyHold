@@ -1,16 +1,16 @@
 {
   "automationId": "699affb9ff6a843cbd6697d1",
   "automationName": "Unnamed Automation",
-  "version": "v15",
+  "version": "v16",
   "mode": "multi-file",
   "dependencies": [
     {
-      "id": "1772035852996_14",
+      "id": "1772035969384_14",
       "name": "axios",
       "version": "latest"
     },
     {
-      "id": "1772035852996_15",
+      "id": "1772035969384_15",
       "name": "crypto",
       "version": "latest"
     }
@@ -25,10 +25,10 @@
     "PARTNER_ENDPOINT",
     "OPERATOR_ACTION",
     "API_KEY",
+    "SESSION_ID",
     "ORCHESTRATOR_BASE_URL",
     "ORCHESTRATOR_API_KEY",
-    "SESSION_ID",
     "TURBOTIC_OPERATOR_ID"
   ],
-  "syncedAt": "2026-02-25T16:13:13.282Z"
+  "syncedAt": "2026-02-25T16:16:11.645Z"
 }
