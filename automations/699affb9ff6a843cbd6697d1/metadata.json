@@ -1,7 +1,7 @@
 {
   "automationId": "699affb9ff6a843cbd6697d1",
   "automationName": "Unnamed Automation",
-  "version": "v11",
+  "version": "v12",
   "mode": "multi-file",
   "dependencies": [
     {
@@ -27,18 +27,11 @@
     "OPERATOR_ACTION",
     "DASHBOARD_ID",
     "DASHBOARD_NAME",
-    "DASHBOARD_DESC",
     "ROLE_EXECUTIVE",
-    "SRC_INTAKE",
-    "SRC_CASE_EXEC",
-    "SRC_CB_SLO",
-    "SRC_FIN_SLO",
-    "SRC_EVID_AUD",
     "TURBOTIC_API_BASE",
     "TURBOTIC_API_TOKEN",
     "DRY_RUN",
-    "UPSERT_MODE",
     "TURBOTIC_DASHBOARD_VIS_PATCH"
   ],
-  "syncedAt": "2026-02-25T10:17:43.891Z"
+  "syncedAt": "2026-02-25T10:18:20.296Z"
 }
