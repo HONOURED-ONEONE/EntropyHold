@@ -1,7 +1,7 @@
 {
   "automationId": "699affb9ff6a843cbd6697d1",
   "automationName": "Unnamed Automation",
-  "version": "v20",
+  "version": "v21",
   "mode": "multi-file",
   "dependencies": [
     {
@@ -28,5 +28,5 @@
     "SESSION_ID",
     "SINCE_MINUTES"
   ],
-  "syncedAt": "2026-02-25T16:22:10.250Z"
+  "syncedAt": "2026-02-25T16:22:17.320Z"
 }
