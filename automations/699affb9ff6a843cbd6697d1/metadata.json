@@ -1,7 +1,7 @@
 {
   "automationId": "699affb9ff6a843cbd6697d1",
   "automationName": "Unnamed Automation",
-  "version": "v23",
+  "version": "v24",
   "mode": "multi-file",
   "dependencies": [
     {
@@ -18,11 +18,10 @@
     "CB_P95_WARN",
     "EVIDENCE_STORE_ENDPOINT",
     "PARTNER_ENDPOINT",
-    "OPERATOR_ACTION",
     "API_KEY",
     "SESSION_ID",
     "SINCE_MINUTES",
     "DRY_RUN"
   ],
-  "syncedAt": "2026-02-26T01:21:20.825Z"
+  "syncedAt": "2026-02-26T01:21:27.714Z"
 }
