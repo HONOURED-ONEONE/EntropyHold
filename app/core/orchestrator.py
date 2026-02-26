@@ -517,6 +517,7 @@ def handle_event(req):
             # ✅ Deterministic Final Report & Persistence
             try:
                 # 1) Generate reportId and freeze report
+                metrics.increment_finalize_attempt()
                 seq = int(getattr(session, "reportSequence", 0) or 0) + 1
                 session.reportSequence = seq
                 session.reportId = f"{session.sessionId}:{seq}"

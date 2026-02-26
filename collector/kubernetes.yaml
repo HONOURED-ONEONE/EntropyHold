@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collector-config
+  namespace: default
+data:
+  FINAL_LIST: "callbacks:final"
+  DLQ_LIST: "callback:dlq"
+  BATCH_SIZE: "200"
+  POLL_INTERVAL_MS: "500"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: collector-secrets
+  namespace: default
+type: Opaque
+stringData:
+  REDIS_URL: "redis://your-redis-host:6379/0"
+  PG_DSN: "postgresql://user:password@your-pg-host:5432/dbname?sslmode=require"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: honeypot-collector
+  namespace: default
+  labels:
+    app: collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector
+  template:
+    metadata:
+      labels:
+        app: collector
+    spec:
+      containers:
+      - name: collector
+        image: gcr.io/your-project-id/honeypot-rq-collector:latest
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: collector-config
+        env:
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: collector-secrets
+              key: REDIS_URL
+        - name: PG_DSN
+          valueFrom:
+            secretKeyRef:
+              name: collector-secrets
+              key: PG_DSN
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: collector-health
+  namespace: default
+spec:
+  selector:
+    app: collector
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: collector-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: honeypot-collector
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

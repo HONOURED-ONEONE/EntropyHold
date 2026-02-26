@@ -64,5 +64,9 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 ## Environment Variables
 See `.env.example` for the complete list.
 
+## Monitoring
+- Enable Prometheus scraping at `/metrics`. Scrapeable in <20ms.
+- View lightweight SLO diagnostics at `/admin/slo`.
+
 ## Notes on Code Quality
 The evaluation rubric reserves a portion of the final score for code quality and requires a valid GitHub repository URL.

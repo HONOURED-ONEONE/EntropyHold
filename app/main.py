@@ -1,11 +1,11 @@
-from fastapi import FastAPI
-from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.api.admin_routes import router as admin_router
 from app.settings import settings
 from app.intel.artifact_registry import snapshot_intent_map
+import app.observability.metrics as metrics
 
 app = FastAPI(title="Agentic Honeypot API")
 
@@ -36,6 +36,12 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def get_metrics():
+    """Prometheus scrape endpoint."""
+    return metrics.generate_prometheus_metrics()
 
 
 # ---------------------------------------------------------------------------

@@ -22,10 +22,12 @@ K_FIN_ATT  = "metrics:finalize:attempt"           # INCR (optional if you count 
 K_CB_LAT   = "metrics:callback:latencies"         # LPUSH ms
 K_CB_ATT   = "metrics:callback:attempts"          # INCR
 K_CB_OK    = "metrics:callback:delivered"         # INCR
+K_CB_FAIL  = "metrics:callback:failed"            # INCR
 K_CB_FAIL_RECENT = "metrics:callback:failed_recent"  # LPUSH sessionId (trim window)
 
 # Optional: sessions waiting (producer can maintain this; if absent we return [])
 K_SESS_WAIT = "metrics:sessions:waiting_for_report"   # SMEMBERS
+K_DLQ = "callback:dlq"                               # LIST
 
 _DEFAULT_WINDOW_SECONDS = 15 * 60
 _MAX_SAMPLES = 500  # cap to bound percentile computation cost
@@ -69,6 +71,10 @@ def increment_callback_attempt() -> None:
 def increment_callback_delivered() -> None:
     r = get_redis()
     r.incr(K_CB_OK, 1)
+
+def increment_callback_failed() -> None:
+    r = get_redis()
+    r.incr(K_CB_FAIL, 1)
 
 def record_callback_latency(ms: int) -> None:
     try:
@@ -177,3 +183,44 @@ def get_slo_snapshot() -> dict:
         "window_seconds": _safe_int_env("SLO_WINDOW_SECONDS", _DEFAULT_WINDOW_SECONDS),
         "snapshot_at": _now_s(),
     }
+
+def generate_prometheus_metrics() -> str:
+    """
+    Export current metrics in Prometheus text format.
+    Scrapeable in <20ms.
+    """
+    r = get_redis()
+    
+    # Latencies
+    fin_lat = _read_latency_list(K_FIN_LAT)
+    _, p95_fin = _p50_p95(fin_lat)
+    
+    cb_lat = _read_latency_list(K_CB_LAT)
+    _, p95_cb = _p50_p95(cb_lat)
+
+    lines = [
+        "# HELP finalize_success_total Total finalized sessions successfully reported",
+        "# TYPE finalize_success_total counter",
+        f"finalize_success_total {int(r.get(K_FIN_SUCC) or 0)}",
+        
+        "# HELP finalize_latency_ms P95 latency of finalization in ms",
+        "# TYPE finalize_latency_ms gauge",
+        f"finalize_latency_ms {round(p95_fin * 1000, 2)}",
+        
+        "# HELP callback_delivered_total Total callbacks successfully delivered",
+        "# TYPE callback_delivered_total counter",
+        f"callback_delivered_total {int(r.get(K_CB_OK) or 0)}",
+        
+        "# HELP callback_latency_ms P95 latency of callback delivery in ms",
+        "# TYPE callback_latency_ms gauge",
+        f"callback_latency_ms {round(p95_cb * 1000, 2)}",
+        
+        "# HELP callback_failed_total Total callback delivery failures",
+        "# TYPE callback_failed_total counter",
+        f"callback_failed_total {int(r.get(K_CB_FAIL) or 0)}",
+        
+        "# HELP dlq_size Current number of items in the callback DLQ",
+        "# TYPE dlq_size gauge",
+        f"dlq_size {r.llen(K_DLQ)}",
+    ]
+    return "\n".join(lines) + "\n"

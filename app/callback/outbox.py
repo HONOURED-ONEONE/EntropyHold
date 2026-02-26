@@ -103,6 +103,7 @@ def process_outbox_entry(session_id: str) -> bool:
         metrics.increment_callback_delivered()
         metrics.record_callback_latency(duration)
     else:
+        metrics.increment_callback_failed()
         metrics.record_failed_callback(session_id)
 
     record = {
@@ -122,6 +123,12 @@ def process_outbox_entry(session_id: str) -> bool:
         ledger["status"] = "delivered"
         ledger["nextAttemptAt"] = 0
         session.callbackStatus = "sent"
+        # Mirror successful callback to final reporting stream
+        try:
+            r = get_redis()
+            r.lpush("callbacks:final", json.dumps(session.finalReport))
+        except Exception:
+            pass
         log(event="callback_delivered", sessionId=session_id, attempt=attempt_idx)
     else:
         backoff = _calc_backoff(attempt_idx)
