@@ -4,7 +4,7 @@ steps:
       [
         "build",
         "-t", "gcr.io/$PROJECT_ID/honeypot-rq-worker:latest",
-        "-f", "docker/Dockerfile.worker",
+        "-f", "docker/Dockerfile.collector.matrix_bot.worker",
         "."
       ]
 

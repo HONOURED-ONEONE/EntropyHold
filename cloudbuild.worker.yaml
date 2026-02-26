@@ -8,7 +8,7 @@ steps:
       [
         "build",
         "-t", "gcr.io/$PROJECT_ID/honeypot-rq-worker:$COMMIT_SHA",
-        "-f", "docker/Dockerfile.worker",
+        "-f", "docker/Dockerfile.collector.matrix_bot.worker",
         "."
       ]
 
