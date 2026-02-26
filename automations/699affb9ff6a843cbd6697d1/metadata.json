@@ -1,7 +1,7 @@
 {
   "automationId": "699affb9ff6a843cbd6697d1",
   "automationName": "Unnamed Automation",
-  "version": "v26",
+  "version": "v27",
   "mode": "multi-file",
   "dependencies": [
     {
@@ -14,14 +14,11 @@
     "HONEYPOT_BASE_URL",
     "HONEYPOT_ADMIN_KEY",
     "P95_FINALIZE_WARN",
-    "CB_SUCCESS_WARN",
-    "CB_P95_WARN",
-    "REDIS_URL",
     "EVIDENCE_STORE_ENDPOINT",
     "PARTNER_ENDPOINT",
     "SESSION_ID",
     "SINCE_MINUTES",
     "DRY_RUN"
   ],
-  "syncedAt": "2026-02-26T01:23:32.266Z"
+  "syncedAt": "2026-02-26T02:42:05.166Z"
 }
