@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.api.admin_routes import router as admin_router
+from app.integrations.twilio_routes import router as twilio_router
 from app.settings import settings
 from app.intel.artifact_registry import snapshot_intent_map
 import app.observability.metrics as metrics
@@ -22,6 +23,7 @@ app.add_middleware(
 
 app.include_router(router)
 app.include_router(admin_router)
+app.include_router(twilio_router)
 
 
 @app.get("/")

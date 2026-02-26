@@ -6,6 +6,7 @@ httpx>=0.26
 starlette>=0.36
 redis>=5.0
 rq>=1.15
+twilio>=9.0
 
 # Optional (if you run structured logs locally)
 # orjson>=3.9
