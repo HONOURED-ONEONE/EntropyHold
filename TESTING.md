@@ -9,6 +9,11 @@ PYTHONPATH=. pytest
 ## Coverage
 The following modules are covered by automated unit tests:
 
+### Behavior API (Hybrid)
+- `tests/api/test_behavior_api.py`: Behavioral Brain endpoints (`/evaluate`, `/update`, `/state`, `/trajectory`).
+- `tests/api/test_admin_hybrid.py`: Hybrid diagnostics and admin views for the behavioral engine.
+- `tests/api/test_debug_routes.py`: External layer debug visibility.
+
 ### Intel
 - `tests/intel/test_artifacts.py`: Artifact extraction (UPI, phone, bank, URL) and normalization.
 - `tests/intel/test_extractor.py`: Intelligence state updates and deduplication.

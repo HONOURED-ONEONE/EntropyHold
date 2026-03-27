@@ -1,29 +1,35 @@
-# Honeypot-RQ — Agentic Honeypot API
+# Honeypot-RQ — Behavioral Brain (Hybrid Architecture)
 
-This repository implements a FastAPI-based honeypot that engages scam conversations, detects scam intent, extracts intelligence (IOCs), and produces a final session output payload suitable for automated evaluation.
+This repository implements the **Behavioral Brain** for an agentic honeypot system. In the hybrid architecture, this Python service owns behavioral evaluation, session state, and intent/constraint selection, while an external **Deception Layer** handles orchestration and prompt mediation.
 
-## Tech Stack
-- **API:** FastAPI
-- **State:** Redis (session persistence)
-- **Async Jobs:** RQ worker (optional, deployment dependent)
-- **LLM (optional):** vLLM OpenAI-compatible endpoint
+## Hybrid Architecture
+- **Behavioral Brain (Python):** Authoritative session state, intent logic, red-flag tagging, and behavioral scoring.
+- **Deception Layer (External):** Traffic steering, decoy provisioning, and high-level orchestration.
+- **Mojo (Optional):** Profiled hot-paths for high-performance interop.
 
-## Deployment Notes (Evaluation)
-The evaluation system sends **POST** requests with:
-`{ sessionId, message, conversationHistory, metadata }`
-and expects a **200 OK** JSON response containing a reply field. The system examples use paths like `/detect`.
+## API Surface
 
-This API supports multiple compatibility paths:
+### 1. Behavioral Brain API (New)
+Advanced endpoints for hybrid integration:
+- `POST /behavior/evaluate`: Stateless message evaluation.
+- `POST /behavior/session/{session_id}/update`: Stateful session advancement.
+- `GET /behavior/session/{session_id}/state`: Current behavioral state and scores.
+- `GET /behavior/session/{session_id}/trajectory`: Chronological behavior history.
+
+### 2. Compatibility Honeypot API (Legacy)
+Preserved for backward compatibility with existing honeypot evaluators:
 - `POST /api/honeypot` (primary)
 - `POST /detect` (compat)
 - `POST /honeypot` (compat)
 - `POST /api/detect` (compat)
 
-Health & ping:
+Health & diagnostics:
 - `GET /health`
 - `GET /ping`
+- `GET /metrics` (Prometheus)
 
 ## Setup (Local)
+...
 
 ### 1) Create a virtual environment
 ```bash

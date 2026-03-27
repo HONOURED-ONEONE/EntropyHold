@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 @dataclass
 class Intelligence:
@@ -126,6 +126,13 @@ class SessionState:
     rephraseApplied: int = 0
     rephraseRejected: int = 0
     lastRephraseRejectReason: Optional[str] = None
+
+    # --- Behavioral Brain API support ---
+    # trajectory: chronological log of behavior state/constraint transitions
+    trajectory: List[Dict[str, Any]] = field(default_factory=list)
+
+    # --- Hybrid/External Layer integration ---
+    hybridMetadata: Dict[str, Any] = field(default_factory=dict)
 
     # --- Conversation Quality tracker (rubric-aligned)
     cqQuestionsAsked: int = 0

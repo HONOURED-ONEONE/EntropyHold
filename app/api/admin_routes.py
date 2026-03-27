@@ -96,3 +96,35 @@ def get_slo(_=Depends(require_admin)):
     Observability snapshot backed by Redis counters.
     """
     return metrics.get_slo_snapshot()
+
+@router.get("/session/{session_id}/behavior")
+def get_session_behavior(session_id: str, _=Depends(require_admin)):
+    """Behavioral analysis snapshot for a session."""
+    from app.core.orchestrator import get_behavior_state
+    state = get_behavior_state(session_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return state
+
+@router.get("/session/{session_id}/trajectory")
+def get_session_trajectory(session_id: str, _=Depends(require_admin)):
+    """Full trajectory of behavioral states and constraints."""
+    s = load_session(session_id)
+    if not s.trajectory:
+        raise HTTPException(status_code=404, detail="No trajectory recorded for this session")
+    return {
+        "sessionId": s.sessionId,
+        "trajectory": s.trajectory
+    }
+
+@router.get("/hybrid/status")
+def get_hybrid_status(_=Depends(require_admin)):
+    """High-level snapshot of hybrid configuration and metrics."""
+    r = get_redis()
+    return {
+        "external_reporting_mode": settings.EXTERNAL_REPORTING_MODE,
+        "behavior_evaluations_total": int(r.get(metrics.K_BEH_EVAL) or 0),
+        "hybrid_overlay_applied_total": int(r.get(metrics.K_HYB_OVERLAY) or 0),
+        "reporting_externalized_total": int(r.get(metrics.K_REP_EXT) or 0),
+        "slo": metrics.get_slo_snapshot()
+    }

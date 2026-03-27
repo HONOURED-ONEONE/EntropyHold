@@ -29,10 +29,25 @@ def enqueue_guvi_final_result(session, finalize_reason: Optional[str] = None) ->
 
     # Idempotency: if already sent, do nothing
     try:
-        if getattr(session, "callbackStatus", "none") == "sent":
+        if getattr(session, "callbackStatus", "none") in ("sent", "prepared"):
             return
     except Exception:
         pass
+
+    # ✅ External reporting mode: Build/persist but do not send.
+    if settings.EXTERNAL_REPORTING_MODE:
+        try:
+            session.callbackStatus = "prepared"
+            metrics.increment_reporting_externalized()
+            log(
+                event="reporting_externalized",
+                sessionId=session.sessionId,
+                finalize_reason=finalize_reason or "",
+                status="prepared"
+            )
+        except Exception:
+            pass
+        return
 
     # Lazy imports to break cycle: orchestrator -> guvi_callback -> jobs -> client -> outbox
     from app.callback.sender import send_final_result_sync

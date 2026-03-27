@@ -49,5 +49,14 @@ Chronological event stream including conversation messages, postscript entries, 
 ## `GET /admin/callbacks?sessionId={id}`
 Idempotency ledger and last finalized payload preview.
 
+## `GET /admin/session/{id}/behavior`
+Returns a Behavioral Brain state snapshot for the session, including behavioral scores and recommendation.
+
+## `GET /admin/session/{id}/trajectory`
+Returns the chronological trajectory of behavioral state transitions and active constraints for the session.
+
+## `GET /admin/hybrid/status`
+High-level snapshot of the service's hybrid configuration, external reporting status, and global behavioral metrics.
+
 ## `GET /admin/slo`
 See [admin-observability.md](./admin-observability.md) for field details.

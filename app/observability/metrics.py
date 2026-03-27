@@ -29,6 +29,13 @@ K_CB_FAIL_RECENT = "metrics:callback:failed_recent"  # LPUSH sessionId (trim win
 K_SESS_WAIT = "metrics:sessions:waiting_for_report"   # SMEMBERS
 K_DLQ = "callback:dlq"                               # LIST
 
+# ✅ NEW: Hybrid & Behavioral Brain Metrics
+K_BEH_EVAL = "metrics:behavior:evaluations"           # INCR
+K_HYB_OVERLAY = "metrics:hybrid:overlay_applied"      # INCR
+K_EXT_HINT_ERR = "metrics:hybrid:hint_errors"         # INCR
+K_BEH_EXHAUST = "metrics:behavior:exhaustion_crossed" # INCR
+K_REP_EXT = "metrics:reporting:externalized"          # INCR
+
 _DEFAULT_WINDOW_SECONDS = 15 * 60
 _MAX_SAMPLES = 500  # cap to bound percentile computation cost
 
@@ -92,6 +99,27 @@ def record_failed_callback(session_id: str) -> None:
     r = get_redis()
     r.lpush(K_CB_FAIL_RECENT, session_id)
     r.ltrim(K_CB_FAIL_RECENT, 0, 49)  # keep last 50
+
+# --- Behavioral Brain & Hybrid Helpers ---
+def increment_behavior_evaluation() -> None:
+    r = get_redis()
+    r.incr(K_BEH_EVAL, 1)
+
+def increment_hybrid_overlay_applied() -> None:
+    r = get_redis()
+    r.incr(K_HYB_OVERLAY, 1)
+
+def increment_external_hint_error() -> None:
+    r = get_redis()
+    r.incr(K_EXT_HINT_ERR, 1)
+
+def increment_behavior_exhaustion() -> None:
+    r = get_redis()
+    r.incr(K_BEH_EXHAUST, 1)
+
+def increment_reporting_externalized() -> None:
+    r = get_redis()
+    r.incr(K_REP_EXT, 1)
 
 def _read_latency_list(key: str) -> List[float]:
     r = get_redis()
@@ -222,5 +250,25 @@ def generate_prometheus_metrics() -> str:
         "# HELP dlq_size Current number of items in the callback DLQ",
         "# TYPE dlq_size gauge",
         f"dlq_size {r.llen(K_DLQ)}",
+
+        "# HELP behavior_evaluations_total Total Behavioral Brain evaluations",
+        "# TYPE behavior_evaluations_total counter",
+        f"behavior_evaluations_total {int(r.get(K_BEH_EVAL) or 0)}",
+
+        "# HELP hybrid_external_overlay_applied_total Total times external hybrid overlay was applied",
+        "# TYPE hybrid_external_overlay_applied_total counter",
+        f"hybrid_external_overlay_applied_total {int(r.get(K_HYB_OVERLAY) or 0)}",
+
+        "# HELP external_deception_hint_errors_total Total errors in external deception hints",
+        "# TYPE external_deception_hint_errors_total counter",
+        f"external_deception_hint_errors_total {int(r.get(K_EXT_HINT_ERR) or 0)}",
+
+        "# HELP behavior_exhaustion_threshold_crossed_total Total times behavior exhaustion limit was reached",
+        "# TYPE behavior_exhaustion_threshold_crossed_total counter",
+        f"behavior_exhaustion_threshold_crossed_total {int(r.get(K_BEH_EXHAUST) or 0)}",
+
+        "# HELP reporting_externalized_total Total reports prepared for external retrieval",
+        "# TYPE reporting_externalized_total counter",
+        f"reporting_externalized_total {int(r.get(K_REP_EXT) or 0)}",
     ]
     return "\n".join(lines) + "\n"

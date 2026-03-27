@@ -59,11 +59,68 @@ def _coerce_history_items(history: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     return out
 
 
+def get_behavior_state(session_id: str) -> Dict[str, Any]:
+    """
+    Returns a snapshot of the behavioral brain state for a session.
+    Used by /behavior/session/{session_id}/state endpoint.
+    """
+    session = load_session(session_id)
+    if not session or not session.conversation:
+        return {}
+
+    # Derive scores for the API
+    # Evasion: variety of red flags and persona friction
+    red_flag_count = len(set(getattr(session, "redFlagHistory", []) or []))
+    evasion_score = min(1.0, red_flag_count / 5.0)
+
+    # Exhaustion: turn count vs limit
+    max_turns = int(getattr(settings, "BF_MAX_TURNS", 15) or 15)
+    turns = int(getattr(session, "turnIndex", 0) or 0)
+    exhaustion_score = min(1.0, turns / max_turns)
+
+    return {
+        "sessionId": session.sessionId,
+        "behaviorState": getattr(session, "bf_state", "BF_S0"),
+        "activeConstraint": getattr(session, "bf_last_intent", "INT_IDLE"),
+        "evasionScore": evasion_score,
+        "exhaustionScore": exhaustion_score,
+        "recommendation": "CONTINUE" if session.state != "FINALIZED" else "CLOSE",
+        "terminate": session.state == "FINALIZED",
+        "reason": getattr(session, "finalize_reason", None),
+        "reply": session.conversation[-1].get("text") if session.conversation and session.conversation[-1].get("sender") == "agent" else None,
+        "metadata": {
+            "turnIndex": session.turnIndex,
+            "scamDetected": session.scamDetected,
+            "scamType": session.scamType,
+            "lastRedFlag": session.lastRedFlagTag,
+            "hybridMetadata": getattr(session, "hybridMetadata", {}),
+        }
+    }
+
+
 def handle_event(req):
     # Single-Writer Guard
     with session_lock(req.sessionId):
         # Load session
         session = load_session(req.sessionId)
+
+        # ✅ Hybrid Layer: persist incoming metadata if provided
+        try:
+            metrics.increment_behavior_evaluation()
+            log(event="behavior_eval", sessionId=session.sessionId, turnIndex=session.turnIndex)
+
+            hm = getattr(req, "hybridMetadata", None)
+            if hm:
+                metrics.increment_hybrid_overlay_applied()
+                log(event="hybrid_overlay_applied", sessionId=session.sessionId, metadata_keys=list(hm.dict().keys() if hasattr(hm, "dict") else hm.keys()))
+                if hasattr(hm, "dict"):
+                    session.hybridMetadata = hm.dict()
+                elif isinstance(hm, dict):
+                    session.hybridMetadata = hm
+        except Exception as e:
+            metrics.increment_external_hint_error()
+            log(event="external_hint_error", sessionId=session.sessionId, error=str(e))
+            pass
 
         # Latch-and-Drain: If already FINALIZED, accept postscript but do not process.
         if session.state == "FINALIZED":
@@ -481,6 +538,17 @@ def handle_event(req):
             # retain existing value if any
             pass
 
+        # --- Behavioral Brain API: Trajectory recording ---
+        try:
+            session.trajectory.append({
+                "turnIndex": session.turnIndex,
+                "behaviorState": bf_state or "BF_S0",
+                "activeConstraint": intent,
+                "timestampMs": now_ms()
+            })
+        except Exception:
+            pass
+
         # Per-turn engagement snapshot (observability)
         try:
             log(
@@ -496,7 +564,9 @@ def handle_event(req):
         # --- Mandatory Callback Trigger (PS-2) ---
         # Only when scamDetected is true and finalization condition is met
         # Ensure it triggers exactly once.
-        if (force_finalize or finalize_reason) and session.scamDetected and session.callbackStatus in ("none", "failed"):
+        is_ephemeral = bool((getattr(req, "settings", {}) or {}).get("ephemeral", False))
+        
+        if not is_ephemeral and (force_finalize or finalize_reason) and session.scamDetected and session.callbackStatus in ("none", "failed"):
             try:
                 log(
                     event="finalize_snapshot",
@@ -553,10 +623,12 @@ def handle_event(req):
             except Exception:
                 session.callbackStatus = "failed"
             # Persist session (kept as-is)
-            save_session(session)
+            if not is_ephemeral:
+                save_session(session)
 
         # Persist session
-        save_session(session)
+        if not is_ephemeral:
+            save_session(session)
 
         # Observability (non-influential)
         try:
@@ -579,5 +651,28 @@ def handle_event(req):
             # ensure no leakage even if overlay end fails
             pass
 
-        # PS-2 API output should be: {"status":"success","reply":"..."} (routes adds status)
-        return {"reply": reply_text}
+        # Derive scores for the rich API result
+        red_flag_count = len(set(getattr(session, "redFlagHistory", []) or []))
+        evasion_score = min(1.0, red_flag_count / 5.0)
+        max_turns = int(getattr(settings, "BF_MAX_TURNS", 15) or 15)
+        turns = int(getattr(session, "turnIndex", 0) or 0)
+        exhaustion_score = min(1.0, turns / max_turns)
+        if exhaustion_score >= 1.0:
+            metrics.increment_behavior_exhaustion()
+            log(event="behavior_exhausted", sessionId=session.sessionId, turnIndex=turns)
+
+        return {
+            "reply": reply_text,
+            "behaviorState": bf_state or "BF_S0",
+            "activeConstraint": intent,
+            "evasionScore": evasion_score,
+            "exhaustionScore": exhaustion_score,
+            "recommendation": "CONTINUE" if session.state != "FINALIZED" else "CLOSE",
+            "terminate": session.state == "FINALIZED" or finalized,
+            "reason": finalize_reason,
+            "metadata": {
+                "turnIndex": session.turnIndex,
+                "scamDetected": session.scamDetected,
+                "scamType": session.scamType,
+            }
+        }

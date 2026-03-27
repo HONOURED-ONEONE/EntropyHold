@@ -1,0 +1,215 @@
+...FF......FFFFF.............FFF.F..............F                        [100%]
+=================================== FAILURES ===================================
+_____________________ test_handle_event_history_extraction _____________________
+mock_log = <MagicMock name='log' id='4420761488'>
+mock_finalize = <MagicMock name='should_finalize' id='4420597072'>
+mock_reply = <MagicMock name='generate_agent_reply' id='4420638176'>
+mock_choose = <MagicMock name='choose_next_action' id='4420667040'>
+mock_detect = <MagicMock name='detect_scam' id='4420687328'>
+mock_save = <MagicMock name='save_session' id='4421081072'>
+mock_load = <MagicMock name='load_session' id='4420684048'>
+mock_req = HoneypotRequest(sessionId='test_session', message=Message(sender='scammer', text='hello +919876543210', timestamp=1234..., 'timestamp': 123}, {'sender': 'user', 'text': 'no', 'timestamp': 124}], detection=None, metadata=None, settings=None)
+    @patch("app.core.orchestrator.load_session")
+    @patch("app.core.orchestrator.save_session")
+    @patch("app.core.orchestrator.detect_scam")
+    @patch("app.core.orchestrator.choose_next_action")
+    @patch("app.core.orchestrator.generate_agent_reply")
+    @patch("app.core.orchestrator.should_finalize")
+    @patch("app.core.orchestrator.log")
+    def test_handle_event_history_extraction(
+        mock_log, mock_finalize, mock_reply, mock_choose, mock_detect, mock_save, mock_load, mock_req
+    ):
+        mock_req.conversationHistory = [
+            {"sender": "scammer", "text": "visit http://scam.link", "timestamp": 123},
+            {"sender": "user", "text": "no", "timestamp": 124}
+        ]
+        session = SessionState(sessionId="test_session")
+        mock_load.return_value = session
+        mock_detect.return_value = {"scamDetected": True, "confidence": 0.9, "scamType": "PHISHING"}
+        mock_choose.return_value = {"intent": "INT_ACK_CONCERN", "bf_state": "BF_S1"}
+        mock_reply.return_value = "Okay"
+        mock_finalize.return_value = None
+
+        handle_event(mock_req)
+
+        # Verify intel was extracted from history
+>       assert "https://scam.link" in session.extractedIntelligence.phishingLinks
+E       AssertionError: assert 'https://scam.link' in ['http://scam.link']
+E        +  where ['http://scam.link'] = Intelligence(bankAccounts=['919876543210'], upiIds=[], phishingLinks=['http://scam.link'], phoneNumbers=['+919876543210']).phishingLinks
+E        +    where Intelligence(bankAccounts=['919876543210'], upiIds=[], phishingLinks=['http://scam.link'], phoneNumbers=['+919876543210']) = SessionState(sessionId='test_session', turnIndex=0, totalMessagesExchanged=0, state='INIT', scamDetected=False, confid...efused_once=False, bf_secondary_bounce_count=0, bf_last_ioc_signature='', bf_recent_intents=[], bf_fallback_used=False).extractedIntelligence
+tests/core/test_orchestrator.py:63: AssertionError
+____________________________ test_phone_extraction _____________________________
+    def test_phone_extraction():
+        text = "Call me at +91-98765-43210 or 1800-123-4567"
+        res = artifact_registry.extract_all(text)
+>       assert "+919876543210" in res["phoneNumbers"]
+E       AssertionError: assert '+919876543210' in ['1800-123-456']
+tests/intel/test_artifacts.py:8: AssertionError
+________________________ test_update_intelligence_mixed ________________________
+    def test_update_intelligence_mixed():
+        session = SessionState(sessionId="test_mixed")
+        text = "Call 9876543210 and visit http://scam.link"
+        update_intelligence_from_text(session, text)
+        assert "9876543210" in session.extractedIntelligence.phoneNumbers
+>       assert "https://scam.link" in session.extractedIntelligence.phishingLinks
+E       AssertionError: assert 'https://scam.link' in ['http://scam.link']
+E        +  where ['http://scam.link'] = Intelligence(bankAccounts=[], upiIds=[], phishingLinks=['http://scam.link'], phoneNumbers=['9876543210']).phishingLinks
+E        +    where Intelligence(bankAccounts=[], upiIds=[], phishingLinks=['http://scam.link'], phoneNumbers=['9876543210']) = SessionState(sessionId='test_mixed', turnIndex=0, totalMessagesExchanged=0, state='INIT', scamDetected=False, confiden...efused_once=False, bf_secondary_bounce_count=0, bf_last_ioc_signature='', bf_recent_intents=[], bf_fallback_used=False).extractedIntelligence
+tests/intel/test_extractor.py:26: AssertionError
+__________________________ test_high_signal_flags_otp __________________________
+    def test_high_signal_flags_otp():
+        high, reasons, scam_hint = _high_signal_flags("Please share your OTP")
+>       assert high is True
+E       assert False is True
+tests/llm/test_detector.py:6: AssertionError
+__________________________ test_high_signal_flags_upi __________________________
+    def test_high_signal_flags_upi():
+        high, reasons, scam_hint = _high_signal_flags("Send money via UPI")
+>       assert high is True
+E       assert False is True
+tests/llm/test_detector.py:12: AssertionError
+_______________________ test_high_signal_flags_phishing ________________________
+    def test_high_signal_flags_phishing():
+        high, reasons, scam_hint = _high_signal_flags("Visit https://bit.ly/123 to verify account")
+>       assert high is True
+E       assert False is True
+tests/llm/test_detector.py:18: AssertionError
+____________________________ test_keyword_fallback _____________________________
+    def test_keyword_fallback():
+        res = _keyword_fallback("Please share your OTP")
+>       assert res["scamDetected"] is True
+E       assert False is True
+tests/llm/test_detector.py:24: AssertionError
+__________________________ test_safety_filter_updated __________________________
+session = SessionState(sessionId='test_session', turnIndex=0, totalMessagesExchanged=0, state='INIT', scamDetected=False, confid...bounce_count=0, bf_last_ioc_signature='98b2bd7410cb4549aa69f64c890579de', bf_recent_intents=[], bf_fallback_used=False)
+    def test_safety_filter_updated(session):
+        assert _safety_filter("please open sms") is True
+        assert _safety_filter("enter otp") is True
+        assert _safety_filter("tap confirm") is True
+>       assert _safety_filter("6-digit code") is True
+E       AssertionError: assert False is True
+E        +  where False = _safety_filter('6-digit code')
+tests/test_broken_flow.py:80: AssertionError
+____________________________ test_finalize_triggers ____________________________
+session = SessionState(sessionId='test_session', turnIndex=0, totalMessagesExchanged=0, state='INIT', scamDetected=True, confide...bounce_count=0, bf_last_ioc_signature='98b2bd7410cb4549aa69f64c890579de', bf_recent_intents=[], bf_fallback_used=False)
+settings = <test_broken_flow.MockSettings object at 0x107ced670>
+    def test_finalize_triggers(session, settings):
+        session.scamDetected = True
+        session.extractedIntelligence.phoneNumbers = ["1234567890"]
+        session.extractedIntelligence.phishingLinks = ["http://scam.com"]
+        # settings.py default is 3 categories
+        session.extractedIntelligence.upiIds = ["scam@upi"]
+>       assert should_finalize(session) is not None
+E       AssertionError: assert None is not None
+E        +  where None = should_finalize(SessionState(sessionId='test_session', turnIndex=0, totalMessagesExchanged=0, state='INIT', scamDetected=True, confide...bounce_count=0, bf_last_ioc_signature='98b2bd7410cb4549aa69f64c890579de', bf_recent_intents=[], bf_fallback_used=False))
+tests/test_broken_flow.py:89: AssertionError
+________________________ test_pick_missing_intel_logic _________________________
+    def test_pick_missing_intel_logic():
+        # Test the pure function directly
+        intel = {
+            "phoneNumbers": [],
+            "phishingLinks": [],
+            "upiIds": [],
+            "bankAccounts": [],
+        }
+        # Link (20) > UPI (15) > Phone (10)
+        assert _pick_missing_intel_intent(intel, []) == INT_ASK_OFFICIAL_WEBSITE
+
+        intel["phishingLinks"] = ["http"]
+        assert _pick_missing_intel_intent(intel, []) == INT_ASK_ALT_VERIFICATION
+
+        intel["upiIds"] = ["scam@upi"]
+        assert _pick_missing_intel_intent(intel, []) == INT_ASK_OFFICIAL_HELPLINE
+
+        intel["phoneNumbers"] = ["123"]
+        # All asked artifacts collected -> ACK_CONCERN
+>       assert _pick_missing_intel_intent(intel, []) == INT_ACK_CONCERN
+E       AssertionError: assert 'INT_CHANNEL_FAIL' == 'INT_ACK_CONCERN'
+E
+E         - INT_ACK_CONCERN
+E         + INT_CHANNEL_FAIL
+tests/test_broken_flow.py:114: AssertionError
+____________ test_guardrail_finalization_ignores_non_registry_data _____________
+session = SessionState(sessionId='test_session', turnIndex=0, totalMessagesExchanged=0, state='INIT', scamDetected=True, confide...bounce_count=0, bf_last_ioc_signature='98b2bd7410cb4549aa69f64c890579de', bf_recent_intents=[], bf_fallback_used=False)
+settings = <test_broken_flow.MockSettings object at 0x107cda6a0>
+    def test_guardrail_finalization_ignores_non_registry_data(session, settings):
+        session.scamDetected = True
+        # Add data to Intelligence that IS in the registry
+        session.extractedIntelligence.phoneNumbers = ["1234567890"]
+
+        # Add something that is NOT in the registry (if we can)
+        # Since we can't easily add fields to the dataclass, we can mock _ioc_category_count
+        # or just trust that it only iterates over registry.
+        # A better test: ensure it doesn't finalize with just 1 registered category
+        # even if other random fields are set.
+        setattr(session.extractedIntelligence, "fake_intel", ["some_data"])
+
+        # Should NOT finalize because FINALIZE_MIN_IOC_CATEGORIES is 3 by default
+        assert should_finalize(session) is None
+
+        # Add 2nd registered category
+        session.extractedIntelligence.phishingLinks = ["http://scam.com"]
+        assert should_finalize(session) is None
+
+        # Add 3rd registered category
+        session.extractedIntelligence.upiIds = ["scam@upi"]
+>       assert should_finalize(session) == "ioc_milestone"
+E       AssertionError: assert None == 'ioc_milestone'
+E        +  where None = should_finalize(SessionState(sessionId='test_session', turnIndex=0, totalMessagesExchanged=0, state='INIT', scamDetected=True, confide...bounce_count=0, bf_last_ioc_signature='98b2bd7410cb4549aa69f64c890579de', bf_recent_intents=[], bf_fallback_used=False))
+tests/test_broken_flow.py:153: AssertionError
+______________________ test_controller_respects_overrides ______________________
+mock_get_redis = <MagicMock name='get_redis' id='4420572688'>
+    @patch("app.store.redis_conn.get_redis")
+    def test_controller_respects_overrides(mock_get_redis):
+        from app.core.broken_flow_controller import _pick_missing_intel_intent
+        from app.intel.artifact_registry import artifact_registry
+        from app.core.broken_flow_constants import INT_ASK_OFFICIAL_HELPLINE, INT_ASK_OFFICIAL_WEBSITE
+
+        # Setup mock redis
+        mock_redis = MagicMock()
+        mock_get_redis.return_value = mock_redis
+
+        # We need to mock settings for the singleton's refresh
+        with patch("app.settings.settings") as mock_settings:
+            mock_settings.REGISTRY_TTL = 0
+            mock_settings.REGISTRY_OVERRIDES_KEY = "registry:overrides"
+
+            # phishingLinks priority is 20, phoneNumbers is 10 by default
+            # Let's override phishingLinks to be disabled for asking
+            mock_redis.get.return_value = json.dumps({
+                "phishingLinks": {"ask_enabled": False}
+            })
+
+            # Trigger refresh via extract_all
+            artifact_registry.extract_all("dummy")
+
+            # Now phishingLinks should be skipped in _pick_missing_intel_intent
+            intel = {"phishingLinks": [], "phoneNumbers": []}
+            # Even though phishingLinks has higher priority (20 vs 10),
+            # it should pick phoneNumbers intent (INT_ASK_OFFICIAL_HELPLINE)
+            intent = _pick_missing_intel_intent(intel, [])
+>           assert intent == INT_ASK_OFFICIAL_HELPLINE
+E           AssertionError: assert 'INT_ASK_ALT_VERIFICATION' == 'INT_ASK_OFFICIAL_HELPLINE'
+E
+E             - INT_ASK_OFFICIAL_HELPLINE
+E             + INT_ASK_ALT_VERIFICATION
+tests/test_runtime_config.py:120: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.9/site-packages/urllib3/__init__.py:35
+  /Users/honoured_one/Honeypot-RQ/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+    warnings.warn(
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/core/test_orchestrator.py::test_handle_event_history_extraction - AssertionError: assert 'https://scam.link' in ['http://scam.link']
+FAILED tests/intel/test_artifacts.py::test_phone_extraction - AssertionError: assert '+919876543210' in ['1800-123-456']
+FAILED tests/intel/test_extractor.py::test_update_intelligence_mixed - AssertionError: assert 'https://scam.link' in ['http://scam.link']
+FAILED tests/llm/test_detector.py::test_high_signal_flags_otp - assert False is True
+FAILED tests/llm/test_detector.py::test_high_signal_flags_upi - assert False is True
+FAILED tests/llm/test_detector.py::test_high_signal_flags_phishing - assert False is True
+FAILED tests/llm/test_detector.py::test_keyword_fallback - assert False is True
+FAILED tests/test_broken_flow.py::test_safety_filter_updated - AssertionError: assert False is True
+FAILED tests/test_broken_flow.py::test_finalize_triggers - AssertionError: assert None is not None
+FAILED tests/test_broken_flow.py::test_pick_missing_intel_logic - AssertionError: assert 'INT_CHANNEL_FAIL' == 'INT_ACK_CONCERN'
+FAILED tests/test_broken_flow.py::test_guardrail_finalization_ignores_non_registry_data - AssertionError: assert None == 'ioc_milestone'
+FAILED tests/test_runtime_config.py::test_controller_respects_overrides - AssertionError: assert 'INT_ASK_ALT_VERIFICATION' == 'INT_ASK_OFFICIAL_HELP...
+12 failed, 37 passed, 1 warning in 0.42s

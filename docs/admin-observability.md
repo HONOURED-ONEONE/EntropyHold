@@ -43,6 +43,15 @@ Key environment variables:
 - `ADMIN_RBAC_ENABLED=true`  
 - `ADMIN_API_KEY=<secret>`  
 
+## Hybrid & Behavioral Metrics
+Available via `GET /metrics` (Prometheus) and `GET /admin/hybrid/status`:
+
+- **behavior_evaluations_total** — total number of sessions/turns processed by the behavioral brain.
+- **hybrid_external_overlay_applied_total** — number of sessions where an external layer provided hybrid metadata context.
+- **external_deception_hint_errors_total** — number of failures in processing or applying external deception hints.
+- **behavior_exhaustion_threshold_crossed_total** — number of sessions that reached the maximum behavioral turn limit (`BF_MAX_TURNS`).
+- **reporting_externalized_total** — number of sessions where a final report was prepared for external retrieval (`EXTERNAL_REPORTING_MODE=true`).
+
 ## Callback Contract Versioning
 - Header **`X-Report-Version`** is set from `CALLBACK_PAYLOAD_VERSION`.  
 - Payload embeds `payloadVersion` and `contractVersion` under `extractedIntelligence._meta`.  

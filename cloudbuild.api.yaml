@@ -8,7 +8,7 @@ steps:
       [
         "build",
         "-t", "gcr.io/$PROJECT_ID/honeypot-rq-api:$COMMIT_SHA",
-        "-f", "docker/Dockerfile.collector.matrix_bot.api",
+        "-f", "docker/Dockerfile.api",
         "."
       ]
 

@@ -4,3 +4,16 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+
+  brain-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - EXTERNAL_REPORTING_MODE=false
+      - BF_MAX_TURNS=10
+    depends_on:
+      - redis

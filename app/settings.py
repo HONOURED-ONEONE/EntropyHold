@@ -93,6 +93,8 @@ class Settings:
     # Feature Flags (Startup & Component Guards)
     ENABLE_OUTBOX: bool = os.getenv("ENABLE_OUTBOX", "true").lower() == "true"
     ENABLE_GUVI_CALLBACK: bool = os.getenv("ENABLE_GUVI_CALLBACK", "true").lower() == "true"
+    # ✅ NEW: Externalized reporting mode (Python builds/persists but doesn't send)
+    EXTERNAL_REPORTING_MODE: bool = os.getenv("EXTERNAL_REPORTING_MODE", "false").lower() == "true"
 
     # Objective 5: Enhanced Intelligence Extraction
     EXTRACTION_ID_ENABLED: bool = os.getenv("EXTRACTION_ID_ENABLED", "true").lower() == "true"
