@@ -102,6 +102,9 @@ def normalize_phone(s: str) -> str:
     clean = re.sub(r"[^\d+]", "", s)
     if clean.startswith("1800") and len(clean) == 10:
         return f"{clean[:4]}-{clean[4:7]}-{clean[7:]}"
+    # If 10-digit Indian mobile (starts with 6-9), prepend +91
+    if len(clean) == 10 and clean[0] in "6789":
+        return "+91" + clean
     return clean
 
 

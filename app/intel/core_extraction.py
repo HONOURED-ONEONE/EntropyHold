@@ -135,7 +135,7 @@ def extract_all(text: str) -> Dict[str, List[str]]:
     for ph in raw_phones:
         d = _format_indian_mobile(ph)
         if is_valid_phone(d):
-            phones.append("+91" + d if not ph.strip().startswith('+') else "+91" + d)
+            phones.append("+91" + d)
     phones = sorted(set(phones))
 
     # Emails

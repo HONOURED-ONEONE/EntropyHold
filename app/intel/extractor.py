@@ -45,10 +45,18 @@ def _post_merge_sanitize(session):
     Cross-category conflict resolution and canonicalization after
     Registry + Tier-1 merge, before data is persisted.
     """
+    from app.intel.artifact_registry import normalize_phone
     intel = session.extractedIntelligence
     # 1) URL canonicalization & de-dup
     intel.phishingLinks = _canonicalize_urls(intel.phishingLinks or [])
-    # 2) Phones vs Bank accounts: remove any 'account' that is actually a phone
+    
+    # 2) Re-normalize phones to ensure consistency (e.g. +91 for Indian mobiles)
+    normalized_phones = []
+    for p in (intel.phoneNumbers or []):
+        normalized_phones.append(normalize_phone(p))
+    intel.phoneNumbers = sorted(set(normalized_phones))
+
+    # 3) Phones vs Bank accounts: remove any 'account' that is actually a phone
     phone_digits = {_digits_only(p) for p in (intel.phoneNumbers or [])}
     cleaned_accts = []
     for acc in (intel.bankAccounts or []):
@@ -58,8 +66,6 @@ def _post_merge_sanitize(session):
             continue
         cleaned_accts.append(d)  # keep accounts as pure digits
     intel.bankAccounts = sorted(set(cleaned_accts))
-    # 3) De-dup phones and keep canonical +91 formatting where present in upstream
-    intel.phoneNumbers = sorted(set(intel.phoneNumbers or []))
 
 def update_intelligence_from_text(session, text: str):
     """
@@ -103,6 +109,11 @@ def update_intelligence_from_text(session, text: str):
     # (these five keys match the evaluator’s categories)
     CORE_KEYS = ("phoneNumbers", "phishingLinks", "upiIds", "bankAccounts", "emailAddresses")
     for k in CORE_KEYS:
+        # Check registry for 'enabled' status before merging Tier-1 results
+        spec = artifact_registry.artifacts.get(k)
+        if spec and not spec.enabled:
+            continue
+            
         vals = ce.get(k, [])
         if not vals:
             continue

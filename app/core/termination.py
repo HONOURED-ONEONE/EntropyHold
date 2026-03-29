@@ -27,6 +27,10 @@ def _ioc_category_count(session) -> int:
     count = 0
     # Use registry to determine which keys to check
     for key in artifact_registry.artifacts.keys():
+        spec = artifact_registry.artifacts.get(key)
+        if spec and not spec.enabled:
+            continue
+            
         # 1) static fields on Intelligence
         if hasattr(intel, key):
             vals = getattr(intel, key)

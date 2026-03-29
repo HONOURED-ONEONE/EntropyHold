@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
+from app.intel.artifact_registry import artifact_registry
 
 
 @dataclass(frozen=True)
@@ -89,6 +90,11 @@ def choose_ladder_target(
 
     # Prefer missing + not on cooldown + not avoided (adaptive)
     for k in plan.order:
+        # Check registry for 'enabled' status (skip if disabled)
+        spec = artifact_registry.artifacts.get(k)
+        if spec and not spec.enabled:
+            continue
+
         if k == "department":
             if "department" in avoid:
                 continue
@@ -106,6 +112,11 @@ def choose_ladder_target(
     # Relax: allow cooldown override if everything is missing but blocked,
     # still respecting avoid_keys to prevent ask-after-received.
     for k in plan.order:
+        # Check registry for 'enabled' status
+        spec = artifact_registry.artifacts.get(k)
+        if spec and not spec.enabled:
+            continue
+
         if k == "department":
             if "department" in avoid:
                 continue
