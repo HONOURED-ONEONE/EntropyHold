@@ -35,6 +35,10 @@ DEFAULT_ARTIFACT_INTENT_MAP = {
     "phishingLinks": INT_ASK_OFFICIAL_WEBSITE,
     "upiIds": INT_ASK_ALT_VERIFICATION,
     "bankAccounts": INT_CHANNEL_FAIL,
+    "emailAddresses": INT_ASK_OFFICIAL_WEBSITE,
+    "caseIds": INT_ASK_TICKET_REF,
+    "policyNumbers": INT_ASK_TICKET_REF,
+    "orderNumbers": INT_ASK_TICKET_REF,
 }
 
 # --------------------------------------------

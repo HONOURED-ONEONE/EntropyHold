@@ -12,9 +12,8 @@ def test_health():
 def test_evaluate_trigger_banned():
     # Test local policy enforcement (banned actor)
     payload = {
-        "session_id": "test-session",
-        "trigger_type": "banned_actor",
-        "payload": {}
+        "message": {"sender": "scammer", "text": "hello", "timestamp": 123456},
+        "metadata": {"trigger_type": "banned_actor"}
     }
     response = client.post("/api/orchestration/evaluate", json=payload)
     assert response.status_code == 403

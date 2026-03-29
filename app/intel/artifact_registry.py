@@ -102,9 +102,14 @@ def normalize_phone(s: str) -> str:
     clean = re.sub(r"[^\d+]", "", s)
     if clean.startswith("1800") and len(clean) == 10:
         return f"{clean[:4]}-{clean[4:7]}-{clean[7:]}"
-    # If 10-digit Indian mobile (starts with 6-9), prepend +91
-    if len(clean) == 10 and clean[0] in "6789":
-        return "+91" + clean
+    
+    # Standardize Indian mobiles to +91 prefix
+    digits = re.sub(r"\D", "", clean)
+    if len(digits) == 10 and digits[0] in "6789":
+        return "+91" + digits
+    if len(digits) == 12 and digits.startswith("91") and digits[2] in "6789":
+        return "+" + digits
+    
     return clean
 
 
@@ -123,12 +128,13 @@ def normalize_upi(s: str) -> str:
 def normalize_url(u: str) -> str:
     # Strip common trailing punctuation that frequently rides with URLs
     u = (u or "").strip().rstrip(').,;!?\'"[]{}')
-    # Promote scheme-less forms:
-    # - www.* -> https://www.*
-    # - shorteners like bit.ly/... -> https://bit.ly/...
-    # - bare domains with / or ? -> https://example.com/...
+    # Promote scheme-less forms and force https://
     ul = u.lower()
-    if ul.startswith("www."):
+    if ul.startswith("http://"):
+        u = "https://" + u[7:]
+    elif ul.startswith("https://"):
+        pass # Already correct
+    elif ul.startswith("www."):
         u = "https://" + u
     elif re.match(r"^(?:bit\.ly|t\.co|tinyurl\.com|is\.gd|goo\.gl|cutt\.ly|rb\.gy)/", ul):
         u = "https://" + u
@@ -414,6 +420,12 @@ class ArtifactRegistry:
             # Conflict rule enforcement
             is_conflicted = False
             for other_key in m["conflicts_with"]:
+                # IMPROVE: Use digits-only comparison for phone/bank
+                if other_key in ("phoneNumbers", "bankAccounts") and key in ("phoneNumbers", "bankAccounts"):
+                    dv = digits_only(val)
+                    if any(digits_only(x) == dv for x in results.get(other_key, [])):
+                        is_conflicted = True
+                        break
                 if val in results.get(other_key, []):
                     is_conflicted = True
                     break

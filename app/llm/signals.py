@@ -18,7 +18,7 @@ from typing import Dict, List, Tuple
 # -----------------------------
 # High-signal indicators
 # -----------------------------
-OTP_TERMS = re.compile(r"\b(otp|one[-\s]?time password|pin|upi\s?pin|password|cvv)\b", re.I)
+OTP_TERMS = re.compile(r"\b(otp|one[-\s]?time password|pin|upi\s?pin|password|cvv|6[-\s]?digit code)\b", re.I)
 PAYMENT_TERMS = re.compile(r"\b(upi|payment|pay|transfer|send money|fee|charges|penalty fee)\b", re.I)
 LINK_TERMS = re.compile(r"(https?://\S+|www\.\S+|bit\.ly/\S+|tinyurl\.com/\S+|t\.co/\S+)", re.I)
 VERIFY_TERMS = re.compile(r"\b(verify|verification|kyc|login|update|activate|unlock)\b", re.I)
@@ -60,20 +60,20 @@ def score_message(text: str) -> Tuple[float, List[str], str]:
 
     # High-signal: OTP/PIN/password
     if OTP_TERMS.search(t):
-        score += 0.50
+        score += 0.75
         reasons.append("credential request (otp/pin/password)")
         type_hint = "BANK_IMPERSONATION"
 
     # High-signal: payment request
     if PAYMENT_TERMS.search(t):
-        score += 0.45
+        score += 0.75
         reasons.append("payment/transfer request")
         if type_hint == "UNKNOWN":
             type_hint = "UPI_FRAUD"
 
     # High-signal: suspicious link + verify/kyc/login language
     if LINK_TERMS.search(t) and VERIFY_TERMS.search(t):
-        score += 0.50
+        score += 0.75
         reasons.append("link combined with verify/login/kyc")
         type_hint = "PHISHING"
 
