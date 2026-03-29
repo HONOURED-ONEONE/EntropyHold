@@ -18,20 +18,29 @@ from typing import Dict, List, Tuple
 # -----------------------------
 # High-signal indicators
 # -----------------------------
-OTP_TERMS = re.compile(r"\b(otp|one[-\s]?time password|pin|upi\s?pin|password|cvv|6[-\s]?digit code)\b", re.I)
-PAYMENT_TERMS = re.compile(r"\b(upi|payment|pay|transfer|send money|fee|charges|penalty fee)\b", re.I)
-LINK_TERMS = re.compile(r"(https?://\S+|www\.\S+|bit\.ly/\S+|tinyurl\.com/\S+|t\.co/\S+)", re.I)
-VERIFY_TERMS = re.compile(r"\b(verify|verification|kyc|login|update|activate|unlock)\b", re.I)
+OTP_TERMS = re.compile(
+    r"\b(otp|one[-\s]?time password|pin|upi\s?pin|password|cvv|6[-\s]?digit code|digit\s?code|verification code|secure code)\b",
+    re.I
+)
+PAYMENT_TERMS = re.compile(
+    r"\b(upi|payment|pay|transfer|send money|fee|charges|penalty fee|amount|transaction|billing|remittance)\b",
+    re.I
+)
+LINK_TERMS = re.compile(r"(https?://\S+|www\.\S+|bit\.ly/\S+|tinyurl\.com/\S+|t\.co/\S+|goo\.gl/\S+|rb\.gy/\S+)", re.I)
+VERIFY_TERMS = re.compile(r"\b(verify|verification|kyc|login|update|activate|unlock|secure|access|confirm account)\b", re.I)
 
 # -----------------------------
 # Medium-signal indicators (common in scams but sometimes appear in legit contexts)
 # -----------------------------
 IMPERSONATION_TERMS = re.compile(
-    r"\b(bank|rbi|customer care|support team|fraud team|kyc team|govt|police|courier|delivery)\b",
+    r"\b(bank|rbi|customer care|support team|fraud team|kyc team|govt|police|courier|delivery|income tax|telecom|service provider)\b",
     re.I,
 )
-THREAT_TERMS = re.compile(r"\b(block|blocked|freeze|frozen|locked|suspend|suspended|legal|fine)\b", re.I)
-URGENCY_TERMS = re.compile(r"\b(urgent|immediately|right now|within|minutes|today|deadline)\b", re.I)
+THREAT_TERMS = re.compile(
+    r"\b(block|blocked|freeze|frozen|locked|suspend|suspended|legal|fine|cancel|canceled|deactivated|termination)\b",
+    re.I
+)
+URGENCY_TERMS = re.compile(r"\b(urgent|immediately|right now|within|minutes|today|deadline|instantly|asap|fast)\b", re.I)
 
 # Requests for sensitive identifiers (without explicitly asking OTP/PIN)
 PERSONAL_INFO_TERMS = re.compile(

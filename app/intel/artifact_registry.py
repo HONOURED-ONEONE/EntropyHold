@@ -98,19 +98,29 @@ def normalize_email(e: str) -> str:
 
 # Normalization utilities
 def normalize_phone(s: str) -> str:
-    # Remove spaces and hyphens but keep + and digits
-    clean = re.sub(r"[^\d+]", "", s)
-    if clean.startswith("1800") and len(clean) == 10:
-        return f"{clean[:4]}-{clean[4:7]}-{clean[7:]}"
-    
-    # Standardize Indian mobiles to +91 prefix
+    # Remove all non-digits but keep + if it's the very first char
+    clean = re.sub(r"[^\d+]", "", (s or ""))
+    has_plus = clean.startswith("+")
     digits = re.sub(r"\D", "", clean)
-    if len(digits) == 10 and digits[0] in "6789":
-        return "+91" + digits
+    
+    if digits.startswith("1800") and len(digits) == 10:
+        return f"{digits[:4]}-{digits[4:7]}-{digits[7:]}"
+    
+    # Standardize Indian mobiles (10 digits starting with 6-9, or 91/0 prefix)
+    # 1) If 12 digits starting with 91 and 3rd is 6-9
     if len(digits) == 12 and digits.startswith("91") and digits[2] in "6789":
         return "+" + digits
+    # 2) If 11 digits starting with 0 and 2nd is 6-9
+    if len(digits) == 11 and digits.startswith("0") and digits[1] in "6789":
+        return "+91" + digits[1:]
+    # 3) If 10 digits starting with 6-9
+    if len(digits) == 10 and digits[0] in "6789":
+        return "+91" + digits
     
-    return clean
+    # Fallback: if it was already E.164-ish with a plus, keep it.
+    if has_plus:
+        return "+" + digits
+    return digits
 
 
 def _digits_only(s: str) -> str:
@@ -138,8 +148,11 @@ def normalize_url(u: str) -> str:
         u = "https://" + u
     elif re.match(r"^(?:bit\.ly|t\.co|tinyurl\.com|is\.gd|goo\.gl|cutt\.ly|rb\.gy)/", ul):
         u = "https://" + u
-    elif re.match(r"^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:/|\?)", ul):
-        u = "https://" + u
+    else:
+        # Objective 1: Ensure any domain-like string found by regex gets a scheme
+        # but only if it doesn't already have one (to avoid https://https://)
+        if "." in ul and not ul.startswith("https://") and not ul.startswith("http://"):
+             u = "https://" + u
     return u
 
 def _valid_http_url(u: str) -> bool:
@@ -430,6 +443,16 @@ class ArtifactRegistry:
                     is_conflicted = True
                     break
             
+            # Special case: Mobile digits (10 digits starting 6-9) must NEVER be bank accounts
+            if key == "bankAccounts":
+                dv = digits_only(val)
+                # 10-digit mobile check
+                if len(dv) == 10 and dv[0] in "6789":
+                    is_conflicted = True
+                # 12-digit mobile check (91 prefix)
+                if len(dv) == 12 and dv.startswith("91") and dv[2] in "6789":
+                    is_conflicted = True
+
             if not is_conflicted and val not in results[key]:
                 results[key].append(val)
 

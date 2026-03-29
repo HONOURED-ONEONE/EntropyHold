@@ -98,22 +98,24 @@ def decide_termination(*, session, controller_out: Optional[Dict[str, Any]] = No
     try:
         min_iocs = int(getattr(settings, "FINALIZE_MIN_IOC_CATEGORIES", 2) or 2)
         min_redflags = int(getattr(settings, "FINALIZE_MIN_REDFLAGS", 4) or 4)
-        min_turns_quality = int(getattr(settings, "CQ_MIN_TURNS", 8) or 8)
+        # ✅ P1.3: Allow earlier finalization if IOC count threshold is reached, 
+        # but still prefer engagement for ~6 turns (reduced from 8).
+        min_turns_quality = int(getattr(settings, "CQ_MIN_TURNS", 6) or 6)
         
         ioc_count = _ioc_category_count(session)
         # Distinct red flags from history
         rf_hist = getattr(session, "redFlagHistory", []) or []
         distinct_rf = len(set(x for x in rf_hist if x != "NONE"))
         
-        # Logic: "DISTINCT IOC categories and/or DISTINCT red-flags".
-        # We'll require BOTH to be safe, or make it flexible?
-        # Let's trigger if IOCs met, BUT gated by min turns to ensure Conversation Quality.
-        
+        # Milestone Trigger: If we have reached or exceeded the IOC category threshold, 
+        # and we have at least 1 turn engaged, we can consider it satisfied.
         if ioc_count >= min_iocs and turns >= min_turns_quality:
-             # Check red flags if configured?
-             # For now, if IOCs are good, we are good.
              return "evidence_quorum_iocs"
         
+        # If we have reached absolute max required IOCs even earlier
+        if ioc_count >= 4 and turns >= 3:
+             return "evidence_quorum_iocs_high"
+
         if distinct_rf >= min_redflags and ioc_count >= 1 and turns >= min_turns_quality:
              return "evidence_quorum_redflags"
 

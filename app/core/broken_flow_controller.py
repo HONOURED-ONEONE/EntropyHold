@@ -22,7 +22,7 @@ import json
 # OTP/PIN boundary trigger (lightweight, controller-local)
 # We avoid importing detector internals; simple keyword check on latest_text.
 # ---------------------------------------------------------------------------
-_BOUNDARY_TERMS = ("otp", "pin", "password")
+_BOUNDARY_TERMS = ("otp", "pin", "password", "6-digit code", "digit code")
 
 
 # ============================================================
@@ -171,12 +171,18 @@ def _pick_missing_intel_target(
         reverse=True,
     )
 
+    relevant_keys = set(EXPECTED_IOCS_BY_SCAMTYPE.get((scam_type or "UNKNOWN").upper(), []))
     recent_window = set(recent_intents[-3:])
 
     # Strict cooldown pass
     for spec in specs:
         if not spec.enabled or not spec.ask_enabled or spec.passive_only:
             continue
+
+        # If we have reached a state where only non-relevant artifacts are missing, 
+        # prefer falling back to ACK or ALT instead of asking for something unrelated.
+        if relevant_keys and spec.key not in relevant_keys and spec.key not in ("caseIds", "policyNumbers", "orderNumbers"):
+             continue
 
         intent = _intent_for_key(spec.key)
         if not intent:
@@ -194,6 +200,9 @@ def _pick_missing_intel_target(
     for spec in specs:
         if not spec.enabled or not spec.ask_enabled or spec.passive_only:
             continue
+
+        if relevant_keys and spec.key not in relevant_keys and spec.key not in ("caseIds", "policyNumbers", "orderNumbers"):
+             continue
 
         intent = _intent_for_key(spec.key)
         if not intent:
