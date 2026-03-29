@@ -8,6 +8,7 @@ from typing import Callable, List, Optional, Dict, Any, Iterable, Set, Tuple
 from app.settings import settings
 from app.store.redis_conn import get_redis
 from urllib.parse import urlparse
+from app.intel.normalize import normalize_text, digits_only
 
 @dataclass
 class ArtifactSpec:
@@ -69,17 +70,16 @@ URL_RE = re.compile(
     r"https?://[^\s<>()\[\]{}\"'\\^`]+"
     r"|www\.[^\s<>()\[\]{}\"'\\^`]+"
     r"|(?:bit\.ly|t\.co|tinyurl\.com|is\.gd|goo\.gl|cutt\.ly|rb\.gy)/[A-Za-z0-9_\-/?=&%#.]+"
-    r"|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:/[^\s<>()\[\]{}\"'\\^`]+|\?[^\s<>()\[\]{}\"'\\^`]+)"
+    r"|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:/[^\s<>()\[\]{}\"'\\^`]*|\?[^\s<>()\[\]{}\"'\\^`]*)"
     r")",
     re.IGNORECASE
 )
 _PHONE_PATTERNS = [
     # Mobile (optionally +91), guarded so it cannot be carved out of adjacent digits
-    re.compile(r"(?<!\d)(?:\+91[-\s]?)?[6-9]\d{9}(?!\d)"),
+    # Improved to handle spaces/dots between digits:
+    re.compile(r'(?<!\d)((?:\+?91[\s.-]?)?(?:0[\s.-]?)?[6-9](?:[\s.-]?\d){9})(?!\d)'),
     # Toll-free 1800 with separators
-    re.compile(r"(?<!\d)1800[-\s]?\d{3}[-\s]?\d{3}(?!\d)"),
-    # Toll-free 1800 contiguous digits (older style)
-    re.compile(r"(?<!\d)1800\d{6,7}(?!\d)"),
+    re.compile(r"(?<!\d)(1800[-\s]?\d{3}[-\s]?\d{3,4})(?!\d)"),
 ]
 
 # ✅ International / E.164-ish phone capture (conservative):
@@ -106,11 +106,11 @@ def normalize_phone(s: str) -> str:
 
 
 def _digits_only(s: str) -> str:
-    return re.sub(r"\D", "", s or "")
+    return digits_only(s)
 
 
 def _valid_intl_phone(raw: str) -> bool:
-    d = _digits_only(raw)
+    d = digits_only(raw)
     # Avoid confusing long IDs with phones; require 10..15 digits
     return 10 <= len(d) <= 15
 
@@ -426,11 +426,8 @@ class ArtifactRegistry:
         return results
 
     def _basic_normalize(self, text: str) -> str:
-        # Re-use logic from extractor.py
-        text = re.sub(r'[\u2010-\u2015]', '-', text)
-        text = re.sub(r'[\u200b-\u200d\ufeff]', '', text)
-        text = re.sub(r'\s+', ' ', text).strip()
-        return text
+        # Re-use centralized logic
+        return normalize_text(text)
 
     def _maybe_refresh_overrides(self):
         # Re-import settings at call time so tests can patch app.settings.settings
