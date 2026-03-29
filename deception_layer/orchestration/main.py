@@ -37,50 +37,70 @@ async def evaluate_trigger(
     Accept suspicious activity / engagement trigger requests.
     Validates orchestration context, applies policy checks, enriches requests, and calls the Python Behavioral Brain.
     """
-    logger.info(f"Evaluating trigger for session {request.session_id}")
+    # Enrich with external layer metadata
+    if not request.hybridMetadata:
+        request.hybridMetadata = HybridMetadata()
     
-    # Policy / rules-of-engagement check placeholder
-    if request.trigger_type == "banned_actor":
-        raise HTTPException(status_code=403, detail="Policy violation: Actor is banned.")
-    
-    # Enrich with external layer metadata (e.g., prompt mediation overrides)
-    request.external_metadata = request.external_metadata or {}
-    request.external_metadata["orchestrator_node"] = "us-east-1"
+    request.hybridMetadata.orchestrationMetadata["orchestrator_node"] = "us-east-1"
+    request.hybridMetadata.externalLayerVersion = "1.0.0"
     
     try:
         # Call the Python Behavioral Brain (HTTP)
-        # Note: Do NOT reimplement behavioral heuristics locally
-        response = await client.post("/api/internal/evaluate", json=request.dict())
+        # Endpoint: /behavior/evaluate (stateless)
+        response = await client.post("/behavior/evaluate", json=request.dict())
         response.raise_for_status()
         return EvaluationResponse(**response.json())
     except httpx.HTTPError as e:
         logger.error(f"Error calling Python brain: {e}")
-        # Return fallback or raise
         raise HTTPException(status_code=502, detail="Behavioral Brain unavailable")
 
-@app.post("/api/orchestration/session/{session_id}/update")
+@app.post("/api/orchestration/session/{session_id}/update", response_model=EvaluationResponse)
 async def update_session(
     session_id: str,
     update: SessionStateUpdate,
     client: httpx.AsyncClient = Depends(get_brain_client),
     authorized: bool = Depends(check_auth)
 ):
+    """Advancing an existing session in the Behavioral Brain."""
     try:
-        response = await client.post(f"/api/internal/session/{session_id}/update", json=update.dict())
+        # Endpoint: /behavior/session/{session_id}/update (stateful)
+        response = await client.post(f"/behavior/session/{session_id}/update", json=update.dict())
         response.raise_for_status()
-        return {"status": "updated"}
+        return EvaluationResponse(**response.json())
     except httpx.HTTPError as e:
+        logger.error(f"Error updating session in brain: {e}")
         raise HTTPException(status_code=502, detail="Behavioral Brain unavailable")
 
-@app.get("/api/orchestration/session/{session_id}")
-async def get_session(
+@app.get("/api/orchestration/session/{session_id}/state", response_model=EvaluationResponse)
+async def get_session_state(
     session_id: str,
     client: httpx.AsyncClient = Depends(get_brain_client),
     authorized: bool = Depends(check_auth)
 ):
+    """Retrieve current state of a session from the Behavioral Brain."""
     try:
-        response = await client.get(f"/api/internal/session/{session_id}")
+        # Endpoint: /behavior/session/{session_id}/state
+        response = await client.get(f"/behavior/session/{session_id}/state")
         response.raise_for_status()
-        return response.json()
+        return EvaluationResponse(**response.json())
     except httpx.HTTPError as e:
+        logger.error(f"Error fetching session state: {e}")
         raise HTTPException(status_code=404, detail="Session not found in Brain")
+
+@app.get("/api/orchestration/session/{session_id}/trajectory", response_model=BehaviorTrajectoryResponse)
+async def get_session_trajectory(
+    session_id: str,
+    client: httpx.AsyncClient = Depends(get_brain_client),
+    authorized: bool = Depends(check_auth)
+):
+    """Retrieve trajectory of a session from the Behavioral Brain."""
+    try:
+        # Endpoint: /behavior/session/{session_id}/trajectory
+        response = await client.get(f"/behavior/session/{session_id}/trajectory")
+        response.raise_for_status()
+        return BehaviorTrajectoryResponse(**response.json())
+    except httpx.HTTPError as e:
+        logger.error(f"Error fetching session trajectory: {e}")
+        raise HTTPException(status_code=404, detail="Session not found in Brain")
+
+

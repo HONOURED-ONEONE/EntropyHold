@@ -9,11 +9,29 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.api
+    container_name: python-brain
     ports:
       - "8000:8000"
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - EXTERNAL_REPORTING_MODE=false
+      - EXTERNAL_REPORTING_MODE=true
       - BF_MAX_TURNS=10
     depends_on:
       - redis
+
+  orchestration:
+    build:
+      context: ./deception_layer/orchestration
+      dockerfile: Dockerfile # Assuming one exists or we scaffold
+    environment:
+      - BRAIN_URL=http://python-brain:8000
+    depends_on:
+      - brain-api
+
+  worker:
+    build:
+      context: ./deception_layer/worker
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+      - brain-api

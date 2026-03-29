@@ -135,7 +135,10 @@ async def behavior_update(session_id: str, payload: BehaviorUpdateRequest = Body
     req_obj = Namespace(
         sessionId=session_id,
         message=msg_obj,
+        conversationHistory=[],
+        detection={},
         metadata=payload.metadata or {},
+        settings={},
         hybridMetadata=payload.hybridMetadata.dict() if payload.hybridMetadata else None
     )
 

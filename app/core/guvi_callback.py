@@ -2,6 +2,7 @@
 from typing import Optional
 from app.observability.logging import log
 from app.settings import settings
+import app.observability.metrics as metrics
 
 def enqueue_guvi_final_result(session, finalize_reason: Optional[str] = None) -> None:
     """
@@ -10,6 +11,15 @@ def enqueue_guvi_final_result(session, finalize_reason: Optional[str] = None) ->
     """
     if not settings.ENABLE_GUVI_CALLBACK:
         return
+
+    # 1) Ensure the session has a finalReport populated before we do anything else
+    from app.callback.payloads import build_final_payload
+    try:
+        if not session.finalReport:
+            session.finalReport = build_final_payload(session)
+    except Exception as e:
+        log(event="payload_build_error", sessionId=session.sessionId, error=str(e))
+
 
     # Persist finalize_reason into agentNotes (append; avoid duplicates)
     try:

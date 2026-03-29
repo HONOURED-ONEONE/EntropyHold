@@ -1,6 +1,7 @@
 import re
 import time
 import json
+import threading
 from typing import Match
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional, Dict, Any, Iterable, Set, Tuple
@@ -251,13 +252,30 @@ def snapshot_intent_map() -> Dict[str, str]:
         out[k] = "yes" if (v.get("instruction") or "").strip() else "no"
     return out
 
+_TLS = threading.local()
+
 class ArtifactRegistry:
     def __init__(self):
         self.artifacts: Dict[str, ArtifactSpec] = {}
         self._defaults: Dict[str, Dict[str, Any]] = {}
         self._last_refresh = 0
-        # NEW: dynamic intent map (IOC key -> {intent, instruction})
-        self.intent_map: Dict[str, Dict[str, Any]] = {}
+        # Global intent map (IOC key -> {intent, instruction})
+        self._global_intent_map: Dict[str, Dict[str, Any]] = {}
+
+    @property
+    def intent_map(self) -> Dict[str, Dict[str, Any]]:
+        # Returns the session-scoped override if present in current thread, else the global map
+        return getattr(_TLS, "intent_map_override", self._global_intent_map)
+
+    @intent_map.setter
+    def intent_map(self, value: Dict[str, Dict[str, Any]]):
+        # We always update the global map unless we specifically want a session override
+        # BUT for the registry singleton, we want the " AUTHORITATIVE" map to be global
+        # unless begin_session_overlay is active.
+        if getattr(_TLS, "overlay_active", False):
+            _TLS.intent_map_override = value
+        else:
+            self._global_intent_map = value
 
     def register(self, spec: ArtifactSpec):
         self.artifacts[spec.key] = spec

@@ -56,37 +56,37 @@ def _load_session_overrides(session_id: str) -> Dict[str, Any]:
 def begin_session_overlay(session_id: str) -> None:
     """
     Apply session-specific overlays by merging them into the in-memory registry
-    for this thread only. Save originals in TLS to be restored by end_session_overlay.
+    for this thread only.
     """
     ov = _load_session_overrides(session_id)
-    # Save originals
-    _TLS.saved_intent_map = getattr(artifact_registry, "intent_map", {}).copy()
+    
+    # Enable thread-local override mode in registry
+    from app.intel.artifact_registry import _TLS as REG_TLS
+    REG_TLS.overlay_active = True
     _TLS.session_overlay_applied = False
 
     # Merge intent-map overlay
     try:
         if isinstance(ov.get("intent_map"), dict) and ov["intent_map"]:
-            merged = _TLS.saved_intent_map.copy()
+            # The registry.intent_map property setter will now use thread-local storage
+            merged = artifact_registry._global_intent_map.copy()
             merged.update(ov["intent_map"])
             artifact_registry.intent_map = merged
             _TLS.session_overlay_applied = True
     except Exception:
-        # keep originals
         pass
-
-    # (Optional) dynamic artifacts are stored in redis and consumed by extractor via _maybe_refresh_overrides.
-    # We don't mutate registry.artifacts here to avoid long-lived cross-session effects.
-    # If desired, extractor can fetch session_key-specific patterns on demand.
 
 def end_session_overlay() -> None:
     """Restore original registry maps after controller/respond cycle."""
+    from app.intel.artifact_registry import _TLS as REG_TLS
     try:
-        if getattr(_TLS, "session_overlay_applied", False):
-            artifact_registry.intent_map = getattr(_TLS, "saved_intent_map", {}) or {}
+        REG_TLS.overlay_active = False
+        if hasattr(REG_TLS, "intent_map_override"):
+            del REG_TLS.intent_map_override
     except Exception:
         pass
     finally:
-        for k in ("session_overlay_applied", "saved_intent_map"):
+        for k in ("session_overlay_applied",):
             if hasattr(_TLS, k):
                 try:
                     delattr(_TLS, k)

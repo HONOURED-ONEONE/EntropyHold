@@ -1,78 +1,73 @@
 # Honeypot-RQ — Behavioral Brain (Hybrid Architecture)
 
-This repository implements the **Behavioral Brain** for an agentic honeypot system. In the hybrid architecture, this Python service owns behavioral evaluation, session state, and intent/constraint selection, while an external **Deception Layer** handles orchestration and prompt mediation.
+This repository implements the **Behavioral Brain** for an agentic honeypot system. In the hybrid architecture, this Python service owns behavioral evaluation, session state, and intent/constraint selection, while the **Deception Layer** (also included) handles orchestration, durable reporting, and ops surfaces.
 
 ## Hybrid Architecture
-- **Behavioral Brain (Python):** Authoritative session state, intent logic, red-flag tagging, and behavioral scoring.
-- **Deception Layer (External):** Traffic steering, decoy provisioning, and high-level orchestration.
-- **Mojo (Optional):** Profiled hot-paths for high-performance interop.
+- **Behavioral Brain (app/):** Python-based authoritative brain for session state, intent logic, red-flag tagging, and behavioral scoring.
+- **Deception Layer (deception_layer/):** 
+  - **Orchestration:** High-level control plane and policy enforcement.
+  - **Worker:** Durable callback delivery and reporting handoff.
+  - **Ops:** Real-time visibility and administrative surface.
+- **Mojo (Optional):** Profiled hot-paths for high-performance extraction (see `app/intel/fast_digits.mojo`).
 
-## API Surface
+## Project Structure
+```text
+├── app/                # Behavioral Brain (Python)
+├── deception_layer/    # Orchestration, Worker, Ops (FastAPI)
+├── collector/          # Evidence collection utilities
+├── matrix_bot/         # Optional Matrix integration
+└── tests/              # Comprehensive test suite
+```
 
-### 1. Behavioral Brain API (New)
+## API Surfaces
+
+### 1. Behavioral Brain API (Internal/Hybrid)
 Advanced endpoints for hybrid integration:
 - `POST /behavior/evaluate`: Stateless message evaluation.
 - `POST /behavior/session/{session_id}/update`: Stateful session advancement.
 - `GET /behavior/session/{session_id}/state`: Current behavioral state and scores.
 - `GET /behavior/session/{session_id}/trajectory`: Chronological behavior history.
 
-### 2. Compatibility Honeypot API (Legacy)
+### 2. Deception Layer API (External)
+Orchestration and administrative surfaces:
+- `POST /api/orchestration/evaluate`: Orchestrated trigger evaluation.
+- `GET /api/ops/session/{session_id}`: Live session state view.
+- `GET /api/worker/health`: Reporting worker health status.
+
+### 3. Compatibility Honeypot API (Legacy)
 Preserved for backward compatibility with existing honeypot evaluators:
 - `POST /api/honeypot` (primary)
 - `POST /detect` (compat)
-- `POST /honeypot` (compat)
-- `POST /api/detect` (compat)
-
-Health & diagnostics:
-- `GET /health`
-- `GET /ping`
-- `GET /metrics` (Prometheus)
 
 ## Setup (Local)
-...
 
-### 1) Create a virtual environment
+### 1) Prerequisites
+- Python 3.9+
+- Redis (required for session state and locking)
+
+### 2) Quick Start (Docker)
+```bash
+docker-compose up --build
+```
+
+### 3) Manual Python Setup
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-```
-
-### 2) Install dependencies
-```bash
 pip install -r requirements.txt
-```
-
-### 3) Configure environment
-Copy `.env.example` to `.env` and fill values as needed.
-
-### 4) Run API
-```bash
+# Set EXTERNAL_REPORTING_MODE=true in .env for hybrid mode
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-## API Contract
-
-### Request (POST)
-```json
-{
-  "sessionId": "uuid-v4-string",
-  "message": { "sender": "scammer", "text": "message text", "timestamp": 1739279400000 },
-  "conversationHistory": [],
-  "metadata": { "channel": "SMS", "language": "English", "locale": "IN" }
-}
-```
-
-### Response (200 OK)
-```json
-{ "status": "success", "reply": "text reply to scammer" }
-```
+## External Reporting Mode
+When `EXTERNAL_REPORTING_MODE=true` is enabled in the Brain:
+1. Python builds and persists the final evidence report.
+2. Status is marked as `prepared`.
+3. Python does NOT attempt delivery; it hands off the durable delivery concern to the Deception Layer worker.
 
 ## Environment Variables
-See `.env.example` for the complete list.
+Key variables in `.env.example`:
+- `EXTERNAL_REPORTING_MODE`: Enable hybrid reporting handoff.
+- `FINAL_OUTPUT_MODE`: `sync`, `rq`, or `hybrid`.
+- `GUVI_CALLBACK_URL`: Target for internal (non-external) callbacks.
 
-## Monitoring
-- Enable Prometheus scraping at `/metrics`. Scrapeable in <20ms.
-- View lightweight SLO diagnostics at `/admin/slo`.
-
-## Notes on Code Quality
-The evaluation rubric reserves a portion of the final score for code quality and requires a valid GitHub repository URL.

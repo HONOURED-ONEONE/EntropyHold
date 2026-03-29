@@ -12,15 +12,19 @@ Commands to run locally:
    source .venv/bin/activate
    pip install -r requirements.txt
 
-4) Run API:
+4) Run Behavioral Brain:
    ./scripts/run_api.sh
 
-5) Run worker (new terminal):
-   source .venv/bin/activate
-   export $(grep -v '^#' .env | xargs)
-   ./scripts/run_worker.sh
+5) Run Deception Layer Orchestration (new terminal):
+   cd deception_layer/orchestration && uvicorn main:app --port 8001
 
-6) Test request:
+6) Run Deception Layer Ops (new terminal):
+   cd deception_layer/ops && uvicorn main:app --port 8002
+
+7) Run Deception Layer Worker (new terminal):
+   cd deception_layer/worker && uvicorn main:app --port 8003
+
+8) Test legacy request:
    curl -X POST http://localhost:8000/api/honeypot \
      -H 'Content-Type: application/json' \
      -H 'x-api-key: YOUR_API_KEY' \
@@ -30,3 +34,12 @@ Commands to run locally:
        "conversationHistory": [],
        "metadata": {"channel": "SMS", "language": "English", "locale": "IN"}
      }'
+
+9) Test hybrid orchestrated request:
+   curl -X POST http://localhost:8001/api/orchestration/evaluate \
+     -H 'Content-Type: application/json' \
+     -d '{
+       "message": {"sender": "scammer", "text": "Hi, click bit.ly/scam", "timestamp": 12345},
+       "hybridMetadata": {"deceptionNarrative": "Urgent Bank Fraud"}
+     }'
+

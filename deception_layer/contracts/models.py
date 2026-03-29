@@ -2,28 +2,61 @@ from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
+class Message(BaseModel):
+    sender: str
+    text: str
+    timestamp: Union[int, str]
+
+
+class HybridMetadata(BaseModel):
+    deceptionNarrative: Optional[str] = None
+    availableSurfaces: List[str] = []
+    orchestrationMetadata: Dict[str, Any] = {}
+    temporaryConstraintOverrides: Dict[str, Any] = {}
+    promptMediationHints: Dict[str, Any] = {}
+    externalPersonaHints: Dict[str, Any] = {}
+    externalArtifactFocus: List[str] = []
+    deceptionLayerTraceId: Optional[str] = None
+    externalLayerVersion: Optional[str] = None
+
 class EvaluationRequest(BaseModel):
-    session_id: str
-    trigger_type: str
-    payload: Dict[str, Any]
-    policy_overrides: Optional[Dict[str, Any]] = None
-    external_metadata: Optional[Dict[str, Any]] = None
+    message: Message
+    conversationHistory: List[Message] = []
+    metadata: Dict[str, Any] = {}
+    hybridMetadata: Optional[HybridMetadata] = None
 
 class EvaluationResponse(BaseModel):
-    session_id: str
-    action: str
-    prompt_mediation: Optional[Dict[str, Any]] = None
-    brain_version: str
+    sessionId: str
+    behaviorState: str = Field(..., description="Current FSM state")
+    activeConstraint: str = Field(..., description="The current intent or behavioral constraint")
+    evasionScore: float = 0.0
+    exhaustionScore: float = 0.0
+    recommendation: Optional[str] = None
+    terminate: bool = False
+    reason: Optional[str] = None
+    reply: Optional[str] = None
+    metadata: Dict[str, Any] = {}
+
+class BehaviorTrajectoryEntry(BaseModel):
+    turnIndex: int
+    behaviorState: str
+    activeConstraint: str
+    timestampMs: int
+
+class BehaviorTrajectoryResponse(BaseModel):
+    sessionId: str
+    trajectory: List[BehaviorTrajectoryEntry]
+
 
 class SessionStateUpdate(BaseModel):
-    session_id: str
-    state: str
-    trajectory: List[str]
-    last_updated: datetime
+    message: Message
+    metadata: Dict[str, Any] = {}
+    hybridMetadata: Optional[HybridMetadata] = None
 
 class DeliveryTask(BaseModel):
-    task_id: str
-    session_id: str
-    report_payload: Dict[str, Any]
-    destination_url: str
-    retry_count: int = 0
+    taskId: str
+    sessionId: str
+    reportPayload: Dict[str, Any]
+    destinationUrl: str
+    retryCount: int = 0
+
