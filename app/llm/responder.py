@@ -295,11 +295,11 @@ META_ANALYSIS_PATTERNS = [
 # Token sets used to enforce "single artifact target" per question.
 # If a question hits 2+ sets, it likely asks for multiple artifacts in one question (e.g., "phone or email").
 TARGET_TOKEN_SETS: Dict[str, List[str]] = {
-    "phoneNumbers": ["helpline", "phone", "number", "call"],
+    "phoneNumbers": ["helpline", "number", "call"],
     "emailAddresses": ["email", "mail", "e-mail"],
     "phishingLinks": ["website", "domain", "site", "link", "portal"],
-    "caseIds": ["reference", "ref", "ticket", "case", "complaint", "id"],
-    "department": ["department", "branch", "office", "team"],
+    "caseIds": ["reference", "ref", "ticket", "case", "complaint"],
+    "department": ["department", "branch", "office"],
     "upiIds": ["upi", "vpa", "handle", " @"],
     "bankAccounts": ["account", "a/c", "acct"],
 }
@@ -310,13 +310,13 @@ TARGET_TOKEN_SETS: Dict[str, List[str]] = {
 INTENT_REQUIRED_TERMS: Dict[str, List[str]] = {
     INT_ASK_OFFICIAL_HELPLINE: ["helpline", "number", "call"],
     INT_ASK_OFFICIAL_WEBSITE: ["website", "domain", "site"],
-    INT_ASK_TICKET_REF: ["reference", "ref", "ticket", "case", "complaint", "id"],
-    INT_ASK_DEPARTMENT_BRANCH: ["department", "branch", "office", "team"],
+    INT_ASK_TICKET_REF: ["reference", "ref", "ticket", "case", "complaint"],
+    INT_ASK_DEPARTMENT_BRANCH: ["department", "branch", "office"],
     # Tighten ALT_VERIFICATION anchors: avoid overly-broad terms like "official" that can allow "is this official?"
     # Keep it focused on "alternate method/option" phrasing.
     INT_ASK_ALT_VERIFICATION: ["alternative", "alternate", "another", "different", "method", "option"],
     INT_REFUSE_SENSITIVE_ONCE: ["official", "verify", "channel"],
-    INT_CHANNEL_FAIL: ["official", "website", "domain", "site"],
+    INT_CHANNEL_FAIL: ["official", "website", "domain", "site", "account", "bank"],
     INT_SECONDARY_FAIL: ["official", "another", "option", "channel"],
 }
 
@@ -378,7 +378,7 @@ def _count_questions(text: str) -> int:
 
 
 def _requires_question(intent: str) -> bool:
-    return intent != INT_CLOSE_AND_VERIFY_SELF
+    return intent not in (INT_CLOSE_AND_VERIFY_SELF, INT_ACK_CONCERN)
 
 
 def _infer_intent_from_instruction(instruction: Optional[str]) -> str:
@@ -387,6 +387,8 @@ def _infer_intent_from_instruction(instruction: Optional[str]) -> str:
     This keeps Fix A aligned with controller intent/instruction (minimizes 'responder decides what to ask').
     """
     t = (instruction or "").lower()
+    if any(k in t for k in ("upi", "vpa", "handle")):
+        return INT_ASK_ALT_VERIFICATION # UPI is handled via ALT_VERIFICATION intent
     if any(k in t for k in ("helpline", "support number", "call", "phone")):
         return INT_ASK_OFFICIAL_HELPLINE
     if any(k in t for k in ("website", "domain", "site", "portal", "link")):

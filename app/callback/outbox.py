@@ -123,6 +123,7 @@ def process_outbox_entry(session_id: str) -> bool:
         ledger["status"] = "delivered"
         ledger["nextAttemptAt"] = 0
         session.callbackStatus = "sent"
+        session.state = "REPORTED"
         # Mirror successful callback to final reporting stream
         try:
             r = get_redis()
@@ -134,6 +135,7 @@ def process_outbox_entry(session_id: str) -> bool:
         backoff = _calc_backoff(attempt_idx)
         ledger["nextAttemptAt"] = _now_ms() + backoff
         ledger["status"] = "pending"
+        session.callbackStatus = "failed"
         
         # Terminal checks for 4xx (except 429)
         if 400 <= status_code < 500 and status_code != 429:

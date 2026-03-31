@@ -1,0 +1,17 @@
+        # Generate reply
+        reply_text = generate_agent_reply(
+            req=req,
+            session=session,
+            intent=intent,
+            instruction=instruction,
+            red_flag_prefix=(rf.prefix if rf else ""),
+            persona_style=(getattr(rf, "style", "") if rf else ""),
+        )
+        # ------------------------------------------------------------
+        # Anti-redundancy: reply similarity guard (one retry pivot)
+        # ------------------------------------------------------------
+        def _fingerprint(text: str) -> str:
+            t = (text or "").lower()
+            t = re.sub(r"[^a-z0-9\s?]", " ", t)
+            t = re.sub(r"\s+", " ", t).strip()
+            return hashlib.md5(t.encode("utf-8")).hexdigest()

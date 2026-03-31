@@ -457,15 +457,15 @@ def handle_event(req):
                     instruction=instruction2,
                     red_flag_prefix=(rf.prefix if rf else ""),
                 )
-                fp2 = _fingerprint(reply_text2)
+                fp2 = _finger # print(reply_text2)
                 # Accept the retry if it differs; otherwise keep original
                 if fp2 != fp:
                     intent = intent2
                     reply_text = reply_text2
                     fp = fp2
-            # Update fingerprint history
+            # Update finger # print history
             recent_fps.append(fp)
-            session.recentAgentReplyFingerprints = recent_fps[-10:]
+            session.recentAgentReplyFinger # prints = recent_fps[-10:]
         except Exception:
             pass
 

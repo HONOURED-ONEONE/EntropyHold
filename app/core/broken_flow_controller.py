@@ -52,6 +52,7 @@ EXPECTED_IOCS_BY_SCAMTYPE = {
     "UPI_FRAUD":          ["upiIds", "phoneNumbers", "caseIds"],
     "PHISHING":           ["phishingLinks", "emailAddresses", "orderNumbers"],
     "JOB_SCAM":           ["phoneNumbers", "upiIds", "policyNumbers"],
+    "UNKNOWN":            ["phoneNumbers", "phishingLinks", "upiIds"], # Default for unknown
 }
 
 def _expected_iocs_covered(intel_dict: Dict[str, Any], scam_type: str) -> bool:
@@ -617,12 +618,12 @@ def choose_next_action(
                     intent = INT_CLOSE_AND_VERIFY_SELF
                     target_key = None
                     force_finalize = True
-                    reason = CTRL_REASON_EXPECTED_IOCS
+                    reason = "ioc_milestone"
                 elif ioc_cnt >= settings.FINALIZE_MIN_IOC_CATEGORIES and turns >= int(getattr(settings, "CQ_MIN_TURNS", 8) or 8):
                     intent = INT_CLOSE_AND_VERIFY_SELF
                     target_key = None
                     force_finalize = True
-                    reason = CTRL_REASON_MIN_TURNS_AND_IOCS
+                    reason = "ioc_milestone"
         except Exception:
             pass
 

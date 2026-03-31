@@ -2,6 +2,9 @@ from app.callback.outbox import process_outbox_entry
 from app.observability.logging import log
 from app.settings import settings
 
+# Alias for backward compatibility with tests
+send_final_result = process_outbox_entry
+
 def send_final_callback_job(session_id: str):
     """
     Background job to process the callback outbox for a session.

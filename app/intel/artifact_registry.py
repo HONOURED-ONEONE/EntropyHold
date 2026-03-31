@@ -103,7 +103,8 @@ def normalize_phone(s: str) -> str:
     has_plus = clean.startswith("+")
     digits = re.sub(r"\D", "", clean)
     
-    if digits.startswith("1800") and len(digits) == 10:
+    # Handle toll-free 1800 numbers (10 or 11 digits)
+    if digits.startswith("1800") and (len(digits) == 10 or len(digits) == 11):
         return f"{digits[:4]}-{digits[4:7]}-{digits[7:]}"
     
     # Standardize Indian mobiles (10 digits starting with 6-9, or 91/0 prefix)

@@ -4,6 +4,9 @@ from app.observability.logging import log
 from app.settings import settings
 import app.observability.metrics as metrics
 
+# Alias for backward compatibility with tests
+from app.queue.rq_conn import Queue, get_queue
+
 def enqueue_guvi_final_result(session, finalize_reason: Optional[str] = None) -> None:
     """
     Enqueue the new Group‑D callback path.
